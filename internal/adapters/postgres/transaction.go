@@ -18,9 +18,9 @@ type transactionKey struct{}
 
 func (m SQLTransactionManager) Do(ctx context.Context, fn func(context.Context) error) error {
 	if tx := getTxFromContext(ctx); tx != nil {
-		fn(ctx)
+		return fn(ctx)
 	}
-	tx, err := m.db.BeginTx(ctx, nil)
+	tx, err := m.db.BeginTxx(ctx, nil)
 	if err != nil {
 		return err
 	}

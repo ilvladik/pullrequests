@@ -20,7 +20,10 @@ func (r *SQLUserRepo) GetUserByID(ctx context.Context, userID string) (*domain.U
 	tx := TxOrDb(ctx, r.db)
 
 	user := &domain.User{}
-	query := "SELECT user_id, username, team_name, is_active FROM users WHERE user_id = $1"
+	query := `
+		SELECT user_id, username, team_name, is_active
+		FROM users WHERE user_id = $1
+	`
 	row := tx.QueryRowxContext(ctx, query, userID)
 
 	if err := row.Scan(&user.UserID, &user.Username, &user.TeamName, &user.IsActive); err != nil {
@@ -32,24 +35,28 @@ func (r *SQLUserRepo) GetUserByID(ctx context.Context, userID string) (*domain.U
 	return user, nil
 }
 
-func (r *SQLUserRepo) UpdateUserActive(ctx context.Context, userID string, isActive bool) error {
-	query := "UPDATE users SET is_active = :is_active WHERE user_id = :user_id"
+func (r *SQLUserRepo) UpdateUser(ctx context.Context, user *domain.User) error {
+	query := `
+		UPDATE users
+		SET username = :username, team_name = :team_name, is_active = :is_active
+		WHERE user_id = :user_id
+	`
 
 	_, err := sqlx.NamedExecContext(
 		ctx,
 		TxOrDb(ctx, r.db),
 		query,
-		map[string]interface{}{
-			"user_id":   userID,
-			"is_active": isActive,
-		},
+		r.toUserRow(user),
 	)
 	return err
 }
 
 func (r *SQLUserRepo) GetActiveUsersByTeamName(ctx context.Context, teamName string) ([]domain.User, error) {
 	tx := TxOrDb(ctx, r.db)
-	query := "SELECT user_id, username, team_name, is_active FROM users WHERE team_name = $1 AND is_active = true"
+	query := `
+		SELECT user_id, username, team_name, is_active
+		FROM users WHERE team_name = $1 AND is_active = true
+	`
 	rows, err := tx.QueryxContext(ctx, query, teamName)
 	if err != nil {
 		return nil, err
@@ -65,4 +72,13 @@ func (r *SQLUserRepo) GetActiveUsersByTeamName(ctx context.Context, teamName str
 		users = append(users, user)
 	}
 	return users, nil
+}
+
+func (r *SQLUserRepo) toUserRow(user *domain.User) map[string]interface{} {
+	return map[string]interface{}{
+		"user_id":   user.UserID,
+		"username":  user.Username,
+		"team_name": user.TeamName,
+		"is_active": user.IsActive,
+	}
 }

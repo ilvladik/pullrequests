@@ -25,13 +25,17 @@ func main() {
 
 	teamRepo := postgres.NewTeamRepo(db)
 	userRepo := postgres.NewUserRepo(db)
+	pullrequestRepo := postgres.NewPRRepo(db)
 	trm := postgres.NewSQLTransactionManager(db)
 
 	teamUsecase := usecases.NewTeamUsecase(teamRepo, trm)
-	teamHandler := handlers.NewTeamHandler(teamUsecase)
-
 	userUsecase := usecases.NewUserUsecase(userRepo, trm)
+	pullrequestUsecase := usecases.NewPRUsecase(pullrequestRepo, userRepo, trm)
+
 	userHandler := handlers.NewUserHandler(userUsecase)
+	teamHandler := handlers.NewTeamHandler(teamUsecase)
+	pullrequestHandler := handlers.NewPRHandler(pullrequestUsecase)
+
 	r := chi.NewRouter()
 
 	r.Route("/team", func(r chi.Router) {
@@ -41,6 +45,13 @@ func main() {
 
 	r.Route("/users", func(r chi.Router) {
 		r.Post("/setIsActive", userHandler.SetUserActive)
+		r.Get("/getReview", pullrequestHandler.GetUserReviewPRs)
+	})
+
+	r.Route("/pullRequest", func(r chi.Router) {
+		r.Post("/create", pullrequestHandler.CreatePR)
+		r.Post("/merge", pullrequestHandler.MergePR)
+		r.Post("/reassign", pullrequestHandler.ReassignReviewer)
 	})
 
 	port := ":8080"

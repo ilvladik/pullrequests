@@ -29,11 +29,12 @@ func (u *UserUsecase) SetUserActive(ctx context.Context, req dtos.UserActiveRequ
 			return domain.NewDomainError(domain.ErrNotFoundCode)
 		}
 
-		if err := u.userRepo.UpdateUserActive(ctx, req.UserID, req.IsActive); err != nil {
+		existingUser.IsActive = req.IsActive
+
+		if err := u.userRepo.UpdateUser(ctx, existingUser); err != nil {
 			return err
 		}
 
-		existingUser.IsActive = req.IsActive
 		user = existingUser
 
 		return nil
