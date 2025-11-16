@@ -24,15 +24,22 @@ func main() {
 	}
 
 	teamRepo := postgres.NewTeamRepo(db)
+	userRepo := postgres.NewUserRepo(db)
 	trm := postgres.NewSQLTransactionManager(db)
 
 	teamUsecase := usecases.NewTeamUsecase(teamRepo, trm)
 	teamHandler := handlers.NewTeamHandler(teamUsecase)
 
+	userUsecase := usecases.NewUserUsecase(userRepo, trm)
+	userHandler := handlers.NewUserHandler(userUsecase)
 	r := chi.NewRouter()
 	r.Route("/team", func(r chi.Router) {
 		r.Post("/add", teamHandler.AddTeam)
 		r.Get("/get", teamHandler.GetTeam)
+	})
+
+	r.Route("/users", func(r chi.Router) {
+		r.Post("/setIsActive", userHandler.SetUserActive)
 	})
 
 	port := ":8080"
