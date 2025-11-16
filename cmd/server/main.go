@@ -35,7 +35,7 @@ func main() {
 	pullrequestRepo := postgres.NewPRRepo(db)
 	trm := postgres.NewSQLTransactionManager(db)
 
-	teamUsecase := usecases.NewTeamUsecase(teamRepo, trm)
+	teamUsecase := usecases.NewTeamUsecase(teamRepo, userRepo, trm)
 	userUsecase := usecases.NewUserUsecase(userRepo, trm)
 	pullrequestUsecase := usecases.NewPRUsecase(pullrequestRepo, userRepo, trm)
 

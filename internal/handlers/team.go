@@ -2,10 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"pullrequests/internal/domain"
 	"pullrequests/internal/dtos"
 	"pullrequests/internal/usecases"
+	"strings"
 )
 
 type TeamHandler struct {
@@ -24,6 +26,11 @@ func (h *TeamHandler) AddTeam(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
+	if err := h.validateTeamRequest(req); err != nil {
+		WriteAPIError(w, http.StatusBadRequest, "VALIDATION_ERROR", err.Error())
+		return
+	}
+
 	result, err := h.usecase.AddTeam(r.Context(), req)
 	if err != nil {
 		h.handleDomainError(w, err)
@@ -36,7 +43,7 @@ func (h *TeamHandler) AddTeam(w http.ResponseWriter, r *http.Request) {
 func (h *TeamHandler) GetTeam(w http.ResponseWriter, r *http.Request) {
 	teamName := r.URL.Query().Get("team_name")
 	if teamName == "" {
-		WriteAPIError(w, http.StatusBadRequest, "INVALID_REQUEST", "team_name query parameter is required")
+		WriteAPIError(w, http.StatusBadRequest, "VALIDATION_ERROR", "team_name is required")
 		return
 	}
 
@@ -56,10 +63,39 @@ func (h *TeamHandler) handleDomainError(w http.ResponseWriter, err error) {
 			WriteAPIError(w, http.StatusBadRequest, domainErr.Code(), domainErr.Message())
 		case string(domain.ErrNotFoundCode):
 			WriteAPIError(w, http.StatusNotFound, domainErr.Code(), domainErr.Message())
+		case string(domain.ErrUserExistsCode):
+			WriteAPIError(w, http.StatusNotFound, domainErr.Code(), domainErr.Message())
 		default:
 			WriteAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Internal server error")
 		}
 		return
 	}
 	WriteAPIError(w, http.StatusInternalServerError, "INTERNAL_ERROR", "Internal server error")
+}
+
+func (h *TeamHandler) validateTeamRequest(req dtos.TeamRequest) error {
+	if strings.TrimSpace(req.TeamName) == "" {
+		return fmt.Errorf("team_name is required")
+	}
+
+	if len(req.Members) == 0 {
+		return fmt.Errorf("team must have at least one member")
+	}
+
+	userIDs := make(map[string]bool)
+	for _, member := range req.Members {
+		if strings.TrimSpace(member.UserID) == "" {
+			return fmt.Errorf("user_id is required for all members")
+		}
+		if strings.TrimSpace(member.Username) == "" {
+			return fmt.Errorf("username is required for all members")
+		}
+
+		if userIDs[member.UserID] {
+			return fmt.Errorf("duplicate user_id: %s", member.UserID)
+		}
+		userIDs[member.UserID] = true
+	}
+
+	return nil
 }

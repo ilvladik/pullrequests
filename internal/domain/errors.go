@@ -4,6 +4,7 @@ type ErrCode string
 
 const (
 	ErrTeamExistsCode  ErrCode = "TEAM_EXISTS"
+	ErrUserExistsCode  ErrCode = "USER_EXISTS"
 	ErrPRExistsCode    ErrCode = "PR_EXISTS"
 	ErrPRMergedCode    ErrCode = "PR_MERGED"
 	ErrNotAssignedCode ErrCode = "NOT_ASSIGNED"
@@ -14,6 +15,7 @@ const (
 
 var descriptions = map[ErrCode]string{
 	ErrTeamExistsCode:  "team already exists",
+	ErrUserExistsCode:  "user already exists",
 	ErrPRExistsCode:    "PR already exists",
 	ErrPRMergedCode:    "PR is already merged",
 	ErrNotAssignedCode: "item is not assigned",

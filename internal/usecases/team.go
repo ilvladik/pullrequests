@@ -7,28 +7,39 @@ import (
 )
 
 type TeamUsecase struct {
-	repo domain.TeamRepo
-	trm  domain.TransactionManager
+	teamRepo domain.TeamRepo
+	userRepo domain.UserRepo
+	trm      domain.TransactionManager
 }
 
-func NewTeamUsecase(repo domain.TeamRepo, trm domain.TransactionManager) *TeamUsecase {
-	return &TeamUsecase{repo: repo, trm: trm}
+func NewTeamUsecase(
+	teamRepo domain.TeamRepo,
+	userRepo domain.UserRepo,
+	trm domain.TransactionManager) *TeamUsecase {
+	return &TeamUsecase{teamRepo: teamRepo, userRepo: userRepo, trm: trm}
 }
 
 func (u *TeamUsecase) AddTeam(ctx context.Context, in dtos.TeamRequest) (*dtos.TeamResponse, error) {
 	err := u.trm.Do(ctx, func(ctx context.Context) error {
-		team, err := u.repo.GetTeamByTeamName(ctx, in.TeamName)
+		team, err := u.teamRepo.GetTeamByTeamName(ctx, in.TeamName)
 		if err != nil {
 			return err
 		}
 		if team != nil {
 			return domain.NewDomainError(domain.ErrTeamExistsCode)
 		}
-		if err := u.repo.Add(ctx, &domain.Team{Name: in.TeamName}); err != nil {
+		if err := u.teamRepo.Add(ctx, &domain.Team{Name: in.TeamName}); err != nil {
 			return err
 		}
 		for _, m := range in.Members {
-			if err := u.repo.AddTeamMember(ctx, in.TeamName, &domain.TeamMember{
+			existingUser, err := u.userRepo.GetUserByID(ctx, m.UserID)
+			if err != nil {
+				return err
+			}
+			if existingUser != nil {
+				return domain.NewDomainError(domain.ErrUserExistsCode)
+			}
+			if err := u.teamRepo.AddTeamMember(ctx, in.TeamName, &domain.TeamMember{
 				UserID:   m.UserID,
 				Username: m.Username,
 				IsActive: m.IsActive}); err != nil {
@@ -52,14 +63,14 @@ func (u *TeamUsecase) AddTeam(ctx context.Context, in dtos.TeamRequest) (*dtos.T
 func (u *TeamUsecase) GetTeam(ctx context.Context, teamName string) (*dtos.Team, error) {
 	var out *dtos.Team
 	err := u.trm.Do(ctx, func(ctx context.Context) error {
-		team, err := u.repo.GetTeamByTeamName(ctx, teamName)
+		team, err := u.teamRepo.GetTeamByTeamName(ctx, teamName)
 		if err != nil {
 			return err
 		}
 		if team == nil {
 			return domain.NewDomainError(domain.ErrNotFoundCode)
 		}
-		members, err := u.repo.GetTeamMembersByTeamName(ctx, teamName)
+		members, err := u.teamRepo.GetTeamMembersByTeamName(ctx, teamName)
 		if err != nil {
 			return err
 		}
